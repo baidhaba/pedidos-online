@@ -59,7 +59,11 @@ function render(){
   const fecha=new Date(ped.fecha||Date.now()).toLocaleString("es-AR");
   let rows='';
   (ped.items||[]).forEach(i=>{
-    rows+=`<tr><td>${esc(i.d)}</td><td class="q">${i.q}</td><td class="u">$${fmt(i.u)}</td><td class="t">$${fmt(i.t)}</td></tr>`;
+    if(i.sinStock){
+      rows+=`<tr><td>${esc(i.d)} <span style="color:#b45309;font-weight:700">(sin stock)</span></td><td class="q">${i.q}</td><td class="u">a consultar</td><td class="t">—</td></tr>`;
+    }else{
+      rows+=`<tr><td>${esc(i.d)}</td><td class="q">${i.q}</td><td class="u">$${fmt(i.u)}</td><td class="t">$${fmt(i.t)}</td></tr>`;
+    }
   });
   cont.innerHTML=`
     <div class="card">
@@ -83,7 +87,7 @@ function render(){
         fecha:ped.fecha||new Date().toISOString(),
         cliente:ped.cliente||'',
         total:ped.total||0,
-        items:(ped.items||[]).map(i=>({c:i.c,d:i.d,q:i.q,u:i.u,t:i.t}))
+        items:(ped.items||[]).map(i=>({c:i.c,d:i.d,q:i.q,u:i.u,t:i.t,sinStock:i.sinStock||undefined}))
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});

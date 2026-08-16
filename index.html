@@ -125,6 +125,11 @@
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#16a34a;color:#fff;font-weight:800;font-size:14px;padding:12px 20px;border-radius:99px;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:60;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
+
+  .card.nostock .thumb .real{filter:grayscale(1) opacity(.55);}
+  .card.nostock .thumb .ph img{filter:grayscale(1);}
+  .nostock-badge{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-8deg);background:rgba(23,22,26,.82);color:#fff;font-weight:900;font-size:13px;letter-spacing:.05em;text-transform:uppercase;padding:5px 14px;border-radius:6px;white-space:nowrap;}
+  .cprice.consultar{font-size:11px;font-weight:800;color:rgba(23,22,26,.45);text-transform:uppercase;letter-spacing:.03em;line-height:1.2;max-width:110px;}
   @media(min-width:768px){ .pkwrap{align-items:center;} .pkpanel{border-radius:22px;} }
   @media(max-width:1023px){
     .cartbtn{display:flex;} aside{display:none;} .main{grid-template-columns:1fr;} .bottombar.show{display:flex;}
@@ -214,9 +219,10 @@ function visibleProducts(){
   });
 }
 function lines(){return Object.keys(state.cart).map(id=>{const p=PRODUCTS.find(x=>x.id===id);return{...p,qty:state.cart[id],total:p.price*state.cart[id]};});}
-function subtotal(){return lines().reduce((a,b)=>a+b.total,0);}
+function subtotal(){return lines().reduce((a,b)=>a+(sinStock(b)?0:b.total),0);}
 function count(){return lines().reduce((a,b)=>a+b.qty,0);}
 function setQty(id,q){if(q>0)state.cart[id]=q;else delete state.cart[id];}
+function sinStock(p){return p.sinStock===true;}
 
 function renderChips(){
   document.getElementById('chips').innerHTML=cats.map(c=>
@@ -225,9 +231,11 @@ function renderChips(){
 function cardHTML(p){
   const qty=state.cart[p.id]||0;
   const hasImg=!!p.img;
+  const out=sinStock(p);
   let thumb=`<div class="thumb${hasImg?'':' noimg'}" ${hasImg?`data-act="photo" data-id="${p.id}"`:''}>`;
   thumb+=`<span class="ph"><img src="${LOGO}" alt=""></span>`;
   if(hasImg) thumb+=`<img class="real" src="${photoSrc(p.img)}" alt="${esc(p.name)}" loading="lazy" onerror="this.remove();this.closest('.thumb').classList.add('noimg')">`;
+  if(out) thumb+=`<span class="nostock-badge">Sin stock</span>`;
   if(hasImg) thumb+=`<span class="zoom"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#17161a" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></svg></span>`;
   thumb+=`</div>`;
   let ctrl;
@@ -236,7 +244,8 @@ function cardHTML(p){
   }else{
     ctrl=`<button class="qtybtn" data-act="picker" data-id="${p.id}">${qty}<span class="u">u.</span></button>`;
   }
-  return `<div class="card">${thumb}<div class="cbody"><div class="ccode">${esc(p.code)}</div><div class="cname">${esc(p.name)}</div><div class="crow"><div class="cprice">$${fmt(p.price)}</div>${ctrl}</div></div></div>`;
+  const precioHTML = out ? `<div class="cprice consultar">Consultar disponibilidad</div>` : `<div class="cprice">$${fmt(p.price)}</div>`;
+  return `<div class="card${out?' nostock':''}">${thumb}<div class="cbody"><div class="ccode">${esc(p.code)}</div><div class="cname">${esc(p.name)}</div><div class="crow">${precioHTML}${ctrl}</div></div></div>`;
 }
 function renderGrid(){
   const vis=visibleProducts();
@@ -255,7 +264,8 @@ function cartHTML(){
   }
   let body='';
   ls.forEach(l=>{
-    body+=`<div class="li"><div class="info"><div class="nm">${esc(l.name)}</div><div class="pu">$${fmt(l.price)} c/u</div><div class="st"><button data-act="sub" data-id="${l.id}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14"/></svg></button><button class="num" data-act="picker" data-id="${l.id}">${l.qty}</button><button data-act="add" data-id="${l.id}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button></div></div><div class="rt"><div class="tot">$${fmt(l.total)}</div><button class="del" data-act="del" data-id="${l.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></div></div>`;
+    const puHTML = sinStock(l) ? `<div class="pu">Sin stock · a consultar</div>` : `<div class="pu">$${fmt(l.price)} c/u</div>`;
+    body+=`<div class="li"><div class="info"><div class="nm">${esc(l.name)}${sinStock(l)?' <span style="color:#b45309;font-weight:800">(sin stock)</span>':''}</div>${puHTML}<div class="st"><button data-act="sub" data-id="${l.id}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14"/></svg></button><button class="num" data-act="picker" data-id="${l.id}">${l.qty}</button><button data-act="add" data-id="${l.id}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button></div></div><div class="rt"><div class="tot">${sinStock(l)?"—":("$"+fmt(l.total))}</div><button class="del" data-act="del" data-id="${l.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></div></div>`;
   });
   return `<div class="cart"><div class="top">Nota de pedido<button class="clear" data-act="clearcart">Vaciar</button></div><div class="body">${body}<div class="sep"></div><div class="totrow"><span class="k">Total</span><span class="v">$${fmt(subtotal())}</span></div><div class="fields"><input id="fName" placeholder="Tu nombre (opcional)" value="${esc(state.name)}"><textarea id="fNote" rows="2" placeholder="Aclaración o dirección (opcional)">${esc(state.note)}</textarea></div><a class="send" href="#" data-act="send"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4Z"/></svg>Enviar pedido por WhatsApp</a><div class="sendhint">Se abre WhatsApp con el pedido ya escrito. Solo tenés que apretar enviar.</div></div></div>`;
 }
@@ -266,7 +276,7 @@ function construirPedido(){
     numero, fecha:new Date().toISOString(),
     cliente:state.name.trim(), nota:state.note.trim(),
     total:subtotal(),
-    items:ls.map(l=>({c:l.code,d:l.name,q:l.qty,u:l.price,t:l.total}))
+    items:ls.map(l=>({c:l.code,d:l.name,q:l.qty,u:sinStock(l)?0:l.price,t:sinStock(l)?0:l.total,sinStock:sinStock(l)||undefined}))
   };
 }
 function waHref(pedido){
@@ -277,7 +287,7 @@ function waHref(pedido){
   t+=`N° ${pedido.numero}\n`;
   if(pedido.cliente) t+=`Cliente: ${pedido.cliente}\n`;
   t+=`——————————————\n`;
-  ls.forEach(l=>{t+=`${l.qty} x ${l.name}\n$${fmt(l.price)} c/u  =  $${fmt(l.total)}\n`;});
+  ls.forEach(l=>{ if(sinStock(l)){ t+=`${l.qty} x ${l.name} (sin stock)\na consultar\n`; } else { t+=`${l.qty} x ${l.name}\n$${fmt(l.price)} c/u  =  $${fmt(l.total)}\n`; } });
   t+=`——————————————\n*TOTAL: $${fmt(pedido.total)}*\n`;
   if(pedido.nota) t+=`\nNota: ${pedido.nota}\n`;
   t+=`\n— Para cargar en la PC, abrí este link:\n${link}\n`;
@@ -302,7 +312,7 @@ function renderModals(){
     const q=parseInt(state.pickerVal||"0",10)||0;
     const keys=["1","2","3","4","5","6","7","8","9"].map(k=>`<button data-act="pkey" data-k="${k}">${k}</button>`).join('');
     h+=`<div class="pkwrap"><div class="bg" data-act="closepicker"></div><div class="pkpanel">`+
-       `<div class="pkhead"><div><div class="pkname">${esc(p.name)}</div><div class="pkprice">$${fmt(p.price)} c/u</div></div><button class="pkx" data-act="closepicker"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>`+
+       `<div class="pkhead"><div><div class="pkname">${esc(p.name)}</div><div class="pkprice">${sinStock(p)?"Sin stock · a consultar":("$"+fmt(p.price)+" c/u")}</div></div><button class="pkx" data-act="closepicker"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>`+
        `<div class="qadjust"><button class="rb" data-act="pminus"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12h14"/></svg></button><div class="qbig"><b>${val}</b><span>unidades</span></div><button class="rb" data-act="pplus"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg></button></div>`+
        `<div class="keys">${keys}<button data-act="pclear">C</button><button data-act="pkey" data-k="0">0</button><button data-act="pback"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2ZM18 9l-6 6M12 9l6 6"/></svg></button></div>`+
        `<button class="kconfirm" data-act="pconfirm">${q>0?('Poner '+q+' en el pedido'):'Quitar del pedido'}</button>`+
