@@ -253,7 +253,7 @@ function visibleProducts(){
     const okCat=state.cat==="Todos"||p.category===state.cat;
     const okQ=!q||p.name.toLowerCase().includes(q)||p.code.toLowerCase().includes(q);
     return okCat&&okQ;
-  });
+  }).sort((a,b)=>(sinStock(a)?1:0)-(sinStock(b)?1:0)); // con stock primero, sin stock al final
 }
 function lines(){return Object.keys(state.cart).map(id=>{const p=PRODUCTS.find(x=>x.id===id);return{...p,qty:state.cart[id],total:p.price*state.cart[id]};});}
 function subtotal(){return lines().reduce((a,b)=>a+(sinStock(b)?0:b.total),0);}
