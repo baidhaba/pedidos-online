@@ -8,6 +8,7 @@
   @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap');
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   :root{--ink:#17161a;--paper:#FBFAF6;--orange:#e8590c;--line:#e9e2d4;}
+  html,body{overscroll-behavior-y:contain;}
   body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);}
   img{display:block;}
   button{font-family:inherit;cursor:pointer;border:none;background:none;}
@@ -381,6 +382,7 @@ function renderCart(){
   bb.classList.toggle('show',c>0);
   document.getElementById('bbCount').textContent=c;
   document.getElementById('bbTotal').textContent='$'+fmt(subtotal());
+  saveCart();
 }
 function renderModals(){
   const m=document.getElementById('modals');
@@ -422,6 +424,24 @@ function renderModals(){
   m.innerHTML=h;
 }
 function renderAll(){renderGrid();renderCart();renderModals();}
+
+// ——— Guardado del pedido en el teléfono (sobrevive a recargas) ———
+const CART_KEY='area51_pedido_pendiente';
+function saveCart(){
+  try{
+    if(Object.keys(state.cart).length===0 && !state.name && !state.note){ localStorage.removeItem(CART_KEY); return; }
+    localStorage.setItem(CART_KEY, JSON.stringify({cart:state.cart,name:state.name,note:state.note}));
+  }catch(_){}
+}
+function loadCart(){
+  try{
+    const raw=localStorage.getItem(CART_KEY); if(!raw) return;
+    const d=JSON.parse(raw); if(!d||typeof d!=='object') return;
+    const cart={};
+    Object.keys(d.cart||{}).forEach(id=>{ if(PRODUCTS.some(p=>p.id===id)){ const q=parseInt(d.cart[id],10); if(q>0) cart[id]=q; } });
+    state.cart=cart; state.name=d.name||''; state.note=d.note||'';
+  }catch(_){}
+}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),3500);}
 
 document.addEventListener('click',e=>{
@@ -451,8 +471,8 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('input',e=>{
   if(e.target.id==='search'){state.query=e.target.value;renderGrid();}
-  else if(e.target.id==='fName'){state.name=e.target.value;}
-  else if(e.target.id==='fNote'){state.note=e.target.value;}
+  else if(e.target.id==='fName'){state.name=e.target.value;saveCart();}
+  else if(e.target.id==='fNote'){state.note=e.target.value;saveCart();}
 });
 
 async function cargarCatalogo(){
@@ -465,6 +485,7 @@ async function cargarCatalogo(){
     return;
   }
   cats.length=0; cats.push("Todos",...Array.from(new Set(PRODUCTS.map(p=>p.category))).sort());
+  loadCart();
   renderChips(); renderAll();
 }
 async function estaAbierto(){
